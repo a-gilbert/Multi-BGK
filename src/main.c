@@ -31,138 +31,254 @@
 #include "BGK.h"
 
 int main(int argc, char **argv) {
-
+  
+  //intialize parallel components.
   MPI_Init(&argc, &argv);
 
   int rank, numRanks;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &numRanks);
+
+  // get input information, set up the problem
+
+//////////////////////////
+// Initial Declarations //
+//////////////////////////
+  
+  /*Variables needed to read input file will be marked with an asterisk
+   in a comment on their line.*/
+  
+  // parallel parameters //
+  /*---------------------*/
   MPI_Status status;
   int rankCounter;
   int rankOffset;
   double *momentBuffer;
   int *Nx_ranks;
+  
+  // general parameters//
+  /*-------------------*/
+  int dims; //*
+  //Notes: consider making different variables for spatial and velocity dims
+  
+  // species parameters//
+  /*-------------------*/
+  int nspec; //* number of species
+  double* m; //* species masses in kg
+  double* Z_max; //* max ion charge
+    // species parameters 0d //
+    /*-----------------------*/
+    double* Z_zerod;
+    // species parameters 1d //
+    /*-----------------------*/
+    double** Z_oned;
+  //Notes: While pointers are inexpensive, condsider following RAII principle,
+  //that is to say only allocate Z once problem dimension is known.
+  
+  // distribution functions //
+  /*------------------------*/
+  
+    // 0d distribution functions //
+    /*---------------------------*/
+    double **f_zerod; // index1:species, index2:velocity
+    double **f_zerod_tmp;
+    //Notes: First index is species, second is velocity.
+  
+    // 1d distribution functions //
+    /*---------------------------*/
+    double ***f;
+    double ***f_tmp;
+    double ***f_conv;
+    //Notes: First index is species, second is position(x), third is velocity
+  
+  // initial conditions //
+  /*--------------------*/
+  
+    // 0d initial conditions //
+    /*-----------------------*/
+    //density info
+    double *n_zerod; //* in cc
+    double ntot;
+    double rhotot;
+    //velocity info
+    double *v_val //*
+    double v0_zerod[3]; //mass-average velocity of mixture
+    double **v_zerod; //index meanings unknown
+    //temp info
+    double *T_zerod; //* in eV
+    double T0;
+    double *Te_arr;
+    double *Te_arr_allranks;
+    double Te_ref; //* background electron temperature for interface problem.
+    double Te_start; //*
+  
+    /* Notes:
+        1) Check if ntot and rhotot are used simultaneously, otherwise may
+        be more memory efficient to only use one. Extremely minor issue.
+     
+        2) Meaning of v_val?
+     
+        3) Examine why v0_zerod is fixed to 3 elements. Insure it is not
+        inherently assumed there are 3 species.
+     
+        4) Check the index meanings of **v_zerod. First index is likely species,
+        but unknown on the second one.
+     
+        5) Consider separating Te_ref, Te_start, as they are for a specific
+        type of problem in 1d.
+    */
+  
+  
+    // 1d initial conditions //
+    /*-----------------------*/
+    //interval info
+    int numint; //*
+    double *intervalLimits; //*
+    //input stuff, idk really
+    int input_file_data_flag = 0; //*
+    //density info
+    double *ndens_int; //*
+    double **n_oned;
+    //velocity info
+    double *vref;
+    double *velo_int; //*
+    double ***v_oned;
+    double **v0_oned; //mass-average velocity of mixture?
+    //temperature info
+    double *T_int; //*
+    double **T_oned; //individual species temps
+    double *T0_oned; //all species temps
+    double **T_for_zbar;
+    double *T_max;
+    double T0_max;
+  
+    /* Notes:
+        1) Check about interface problem being in 1d as well.
+    */
+  
+  /* Notes:
+      1) The number of parameters here is large. Again, follow RAII principle,
+      and declare/initialize variables when the are needed.
+   
+      2) Check meaning of vref for 1d case.
+   */
+  
+  // Grid Params //
+  /*-------------*/
+  
+    // Velocity Grid 0d/1d //
+    /*---------------------*/
+    int Nv; //*
+    int discret; //* 0-uniform, 1-gauss
+    double *Lv //semi-length, domain is [-Lv, Lv]
+    double v_sigma; //* width of velocity domain in terms of thermal speeds.
+    double **c; //first dim is species, second is 1d velo grid points.
+    double **wts; //indexing same as variable on line 173 (above).
+  
+    /* Notes:
+        1) Check meaning of wts. Maybe weighted thermal speed??
+       
+        2) Check generalization to arbitrary dim. Possibly nonuniform Lv,
+             per a species? Would cost some overhead.
+    */
+  
+    // Physical Grid 1d //
+    /*------------------*/
+    int order; //* spatial order of scheme, 1 or 2
+    int Nx; //* Total number of phys. grid points across all ranks.
+    int Nx_rank; //phys. grid points on current rank, excluding ghost cells.
+    double Lx; //* in cm
+    double dx;
+    double *x;
+    double *dxarray;
+  
+    /* Notes:
+        1) Potential redundency in having both Lx and dx. Very minor.
+       
+        2) Some of these variables coud be moved to general params. Maybe
+        define things in the following order: problem domain, dependent variables,
+        problem type, solution type, output specification. Specifically, order
+        should be under solution type, as should Nx.
+    */
+  
+      // Physical Grid Potential 1d //
+      /*----------------------------*/
+      double *PoisPot;
+      double *PoisPot_allranks;
+      double *source;
+      double *source_buf;
+      double *source_allranks;
+      //problem params for pois
+      int poissFlavor; //*
+      int ionFix; //*
+  
+        /* Notes:
+            1) Consider the two integers as part of problem type, down the line.
+            Again, very minor.
+        */
+  
+  // Time Params //
+  /*-------------*/
+  double dt; //*
+  double tfinal; //*
+  double nT;
+  int im_ex; //*
+  int outcount = 0;
+  int dataFreq; //*
+  int outputDist; //*
+  int restartFlag;
+  int tauFlag;
+  double RHS_tol; //*
+  double RHS_min;
+  double rel_BGK;
+  
+  /* Notes:
+      1) Check meaning of flags.
+   
+      2) Put all the RHS stuff under solution type, not domain.
+   
+      3) Check meanining of nT, maybe redundant to have dt, nT, and tfinal.
+   
+      4) output info should be put under solution type.
+   
+      5) restart is problem type.
+   
+      6) BGK stuff should be moved to other bgk stuff, potential for abstraction
+      of notion of 'RHS'
+  */
+  
+  // Input File Params //
+  /*-------------------*/
+  char input_filename[100]; //*
+  char input_file_data_filename[100]; //*
+  
+  // indexing variables //
+  /*--------------------*/
+  int i, j, k, l, s, index;
 
-  // get input information, set up the problem
-
-  ////////////////
-  // Declarations//
-  ////////////////
-
-  int nspec; // number of species
-  int dims;  // flag for 0D or 1D
-
-  int i, j, k, l, s;
-
-  // species masses
-  double *m; // in kg
-
-  // species charges
-  double **Z_oned, *Z_max, *Z_zerod;
 
   // Flags for BGK collision rates
-  int ecouple, CL_type, ion_type, MT_or_TR;
-  int BGK_type;
-  double beta;
+  int ecouple; //*
+  int CL_type; //*
+  int ion_type; //*
+  int MT_or_TR; //*
+  int BGK_type; //*
+  double beta; //*
 
-  // distribution functions
 
-  // For 0D - First dimension is species, second is velocity
-  double **f_zerod;
-  double **f_zerod_tmp;
 
-  // For 1D - First dimension is species, second is position (x), third is
-  // velocity
-  double ***f, ***f_tmp, ***f_conv;
-
-  // initial condition stuff - 0D
-  double *v_val;
-
-  double *n_zerod; // in cc
-  double ntot, rhotot;
-
-  double **v_zerod;
-  double v0_zerod[3]; // mass-average velocity of the mixture
-
-  double *T_zerod; // in eV
-
+  //unknown params
+  //listed under 0d initial conditions
   double Htot, Htot_prev;
   double *H_spec, *H_spec_prev;
   double **BGK_f_minus_eq, **BGK_f_minus_eq_init;
+  //listed under time setup
+  int hydro_kinscheme_flag; //*
+  
+///////////////////
+// Reading Input //
+///////////////////
 
-  double T0;
-  double *Te_arr, *Te_arr_allranks;
-  double Te_ref; // background electron temperature for interface problem
-  double Te_start;
-
-  // initial condition parameters - 1D
-  int numint;
-  double *intervalLimits;
-  int input_file_data_flag = 0;
-
-  double *vref;
-
-  double *ndens_int;
-  double **n_oned;
-
-  double *velo_int;
-  double ***v_oned;
-  double **v0_oned;
-
-  double *T_int;
-  double **T_oned;
-  double *T0_oned;
-  double **T_for_zbar;
-  double *T_max, T0_max;
-
-  // Velocity grid setup - 0D and 1D
-  int Nv;
-  int discret;    // 0 - uniform, 1 - gauss
-  double *Lv;     // semi-length, domain is [-Lv,Lv]
-  double v_sigma; // width of velocity domains in terms of thermal speeds
-  double **c; // first dimension is species, second is 1D velo grid points. Full
-              // velo pt is e.g. (v[0][i], v[0][j], v[0][k])
-  double **wts; // first dimension is species, second is 1D velo grid points.
-                // Full wts pt is e.g. (wts[0][i], wts[0][j], wts[0][k])
-  int index;
-
-  // Physical grid setup - 1D
-  int order;   // spatial order of scheme, 1 or 2
-  int Nx;      // Total number of physical grid points across all ranks
-  int Nx_rank; // Physical grid points on the current rank (not including ghost
-               // cells)
-  double Lx;   // in cm
-  double dx;
-  double *x, *dxarray;
-
-  double *PoisPot, *PoisPot_allranks;
-  double *source, *source_buf, *source_allranks;
-  int poissFlavor;
-  int ionFix;
-
-  // Time setup
-  double dt;
-  double tfinal;
-  double t;
-  int nT;
-  int im_ex;
-  int outcount = 0;
-  int dataFreq;
-  int outputDist;
-  int restartFlag;
-  int tauFlag;
-  double RHS_tol;
-  double RHS_min;
-  double rel_BGK;
-
-  int hydro_kinscheme_flag;
-
-  /**********************************
-         I/O Setup
-  **********************************/
-
-  char input_filename[100];
-  char input_file_data_filename[100];
   strcpy(input_filename, argv[1]);
 
   read_input(&nspec, &dims, &Nx, &Lx, &Nv, &v_sigma, &discret, &poissFlavor, &m,
@@ -172,9 +288,12 @@ int main(int argc, char **argv) {
              &T_zerod, &dataFreq, &outputDist, &RHS_tol, &BGK_type, &beta,
              &hydro_kinscheme_flag, &input_file_data_flag,
              input_file_data_filename, input_filename);
+  //above function definitely very clunky. It works, but definitely should be made
+  //prettier. Options: different reads for different dimensional problems, different
+  //problem types, etc.
 
   char output_path[100] = {"./Data/"};
-  strcat(output_path, argv[1]);
+  strcat(output_path, argv[1]); //assumption of input filename as output location.
 
   if (argc < 3)
     restartFlag = 0;
@@ -189,7 +308,9 @@ int main(int argc, char **argv) {
   if (argc > 2)
     printf("restart %d tau %d\n", restartFlag, tauFlag);
 
-  // SHOULD FARM THIS OFF TO A ROUTINE
+//////////////////////////////////
+// output variable declarations //
+//////////////////////////////////
   char dens_path[100];
   char velo_path[100];
   char temp_path[100];
@@ -214,11 +335,14 @@ int main(int argc, char **argv) {
   H_spec_prev = malloc(nspec * sizeof(double));
   BGK_f_minus_eq = malloc(nspec * sizeof(double *));
   BGK_f_minus_eq_init = malloc(nspec * sizeof(double *));
+  //check if necessary to be nspec by nspec, maybe symmetric.
   for (i = 0; i < nspec; i++) {
     BGK_f_minus_eq[i] = malloc(nspec * sizeof(double));
     BGK_f_minus_eq_init[i] = malloc(nspec * sizeof(double));
   }
 
+  //check logic here. Why have every rank open output files if dims==0?
+  //Ans: assumed running on only 1 rank if dims=0.
   if ((dims == 0) || (rank == 0)) {
     for (i = 0; i < nspec; i++) {
       strcpy(dens_path, output_path);
@@ -333,6 +457,8 @@ int main(int argc, char **argv) {
       if (n_zerod[i] != 0.0) {
         T0 += n_zerod[i] * T_zerod[i] / ntot;
         for (j = 0; j < 3; j++)
+          //acounting for difference of each species bulk velocity,
+          //relative to bulk velocity of all species.
           T0 += m[i] * n_zerod[i] * (v_zerod[i][j] - v0_zerod[j]) *
                 (v_zerod[i][j] - v0_zerod[j]) / (3.0 * ntot);
       }
