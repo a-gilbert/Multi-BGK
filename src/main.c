@@ -11,6 +11,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+//Variable Containers
+#include "Time.h"
+
 // Utilities and setup stuff
 #include "gauss_legendre.h"
 #include "initialize_sol.h"
@@ -25,6 +28,7 @@
 // Vlasov/LHS packages
 #include "mesh.h"
 #include "poissonNonlinPeriodic.h"
+#include "poissonNonlin.h"
 #include "transportroutines.h"
 
 // BGK/RHS packages
@@ -48,6 +52,8 @@ int main(int argc, char **argv) {
   ////////////////
   // Declarations//
   ////////////////
+  struct TimeInfo SimTimeInfo;
+  init_timeInfo(&SimTimeInfo);
 
   int nspec; // number of species
   int dims;  // flag for 0D or 1D
@@ -95,14 +101,17 @@ int main(int argc, char **argv) {
   double Te_ref; // background electron temperature for interface problem
   double Te_start;
 
+
   // initial condition parameters - 1D
   int numint;
   double *intervalLimits;
   int input_file_data_flag = 0;
 
+
   double *vref;
 
   double *ndens_int;
+  double **zbar_int;
   double **n_oned;
 
   double *velo_int;
@@ -127,6 +136,7 @@ int main(int argc, char **argv) {
   int index;
 
   // Physical grid setup - 1D
+  int bc; //boundary conditions, ==0 if periodic, ==1 if fixed. 
   int order;   // spatial order of scheme, 1 or 2
   int Nx;      // Total number of physical grid points across all ranks
   int Nx_rank; // Physical grid points on the current rank (not including ghost
@@ -165,7 +175,7 @@ int main(int argc, char **argv) {
   char input_file_data_filename[100];
   strcpy(input_filename, argv[1]);
 
-  read_input(&nspec, &dims, &Nx, &Lx, &Nv, &v_sigma, &discret, &poissFlavor, &m,
+  read_input(&nspec, &dims, &Nx, &Lx, &bc, &Nv, &v_sigma, &discret, &poissFlavor, &m,
              &Z_max, &order, &im_ex, &dt, &tfinal, &numint, &intervalLimits,
              &ndens_int, &velo_int, &T_int, &ecouple, &ionFix, &Te_start,
              &Te_ref, &CL_type, &ion_type, &MT_or_TR, &n_zerod, &v_val,
@@ -452,6 +462,7 @@ int main(int argc, char **argv) {
 
   if (dims == 1) {
 
+    
     // Physical grid allocation and initialization
     make_mesh(Nx, Lx, order, &Nx_rank, &Nx_ranks, &x, &dxarray);
     momentBuffer = malloc(3 * (Nx_rank + 1) * sizeof(double));
@@ -537,6 +548,7 @@ int main(int argc, char **argv) {
 
     // Allocate for poisson calc
     PoisPot = malloc((Nx_rank + 2 * order) * sizeof(double));
+    //seems like a waste of memory
     PoisPot_allranks = malloc(Nx * sizeof(double));
     source = malloc(Nx_rank * sizeof(double));
     source_buf = malloc(2 * (Nx_rank + 1) * sizeof(double));
@@ -720,6 +732,13 @@ int main(int argc, char **argv) {
       initialize_sol_inhom(f, numint, intervalLimits, ndens_int, velo_int,
                            T_int, Nx_rank, x, nspec, Nv, order, c, m, n_oned,
                            v_oned, T_oned);
+      zbar_int = malloc(numint * sizeof(double*));
+      for(i = 0; i < numint; i++) {
+        zbar_int[i] = malloc(nspec*sizeof(double));
+        for(j=0; j < nspec; j++) {
+          zbar_int[i][j] = 
+        }
+      }
 
     if (rank == 0) {
       printf("Initial condition setup complete\n");
@@ -1059,19 +1078,23 @@ int main(int argc, char **argv) {
         if (poissFlavor == 0) { // no E-field
           for (l = 0; l < Nx; l++)
             PoisPot_allranks[l] = 0.0;
-        } else if (poissFlavor == 11) // Linear Yukawa
-          PoissLinPeriodic1D(Nx, source_allranks, dx, Lx, PoisPot_allranks,
-                             Te_arr_allranks);
-        else if (poissFlavor == 12) // Nonlinear Yukawa
+        } else if (poissFlavor == 11){ // Linear Yukawa
+          if (bc == 0) {
+            PoissLinPeriodic1D(Nx, source_allranks, dx, Lx, PoisPot_allranks,
+                               Te_arr_allranks);
+          } else {
+
+          }
+        } else if (poissFlavor == 12 && bc == 0){ // Nonlinear Yukawa
           PoissNonlinPeriodic1D(Nx, source_allranks, dx, Lx, PoisPot_allranks,
                                 Te_arr_allranks);
-        else if (poissFlavor == 21) // Linear Thomas-Fermi
+        } else if (poissFlavor == 21 && bc == 0){ // Linear Thomas-Fermi
           PoissLinPeriodic1D_TF(Nx, source_allranks, dx, Lx, PoisPot_allranks,
                                 Te_arr_allranks);
-        else if (poissFlavor == 22) // Nonlinear Thomas-Fermi
+        } else if (poissFlavor == 22 && bc == 0){ // Nonlinear Thomas-Fermi
           PoissNonlinPeriodic1D_TF(Nx, source_allranks, dx, Lx,
                                    PoisPot_allranks, Te_arr_allranks);
-        //}
+        }
       }
 
       // Distribute back to the other ranks
