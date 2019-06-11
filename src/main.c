@@ -13,6 +13,8 @@
 
 //Variable Containers
 #include "Time.h"
+#include "Species.h"
+#include "Domain.h"
 
 // Utilities and setup stuff
 #include "gauss_legendre.h"
@@ -52,16 +54,17 @@ int main(int argc, char **argv) {
   ////////////////
   // Declarations//
   ////////////////
+  //dt, t, tfinal, nT
   struct TimeInfo SimTimeInfo;
-  init_timeInfo(&SimTimeInfo);
+  //ionFix, ecouple, nspec, m, Z
+  struct SpeciesInfo SimSpecInfo;
+  //sdims, slims, Nx, vdims, discret, vmag_lims, Nv, vsigma, vref
+  struct DomainInfo SimDomainInfo;
 
-  int nspec; // number of species
   int dims;  // flag for 0D or 1D
 
   int i, j, k, l, s;
 
-  // species masses
-  double *m; // in kg
 
   // species charges
   double **Z_oned, *Z_max, *Z_zerod;
@@ -151,10 +154,6 @@ int main(int argc, char **argv) {
   int ionFix;
 
   // Time setup
-  double dt;
-  double tfinal;
-  double t;
-  int nT;
   int im_ex;
   int outcount = 0;
   int dataFreq;

@@ -2,11 +2,10 @@
 #include "Time.h"
 
 void init_timeInfo(struct TimeInfo* tinfo){
-    tinfo->dt = 0.0;
+    tinfo->dt = 1e-16;
     tinfo->t = 0;
-    tinfo->tfinal = 0;
+    tinfo->tfinal = 1e-12;
     tinfo->nT = 0;
-
 }
 
 void set_timestep(struct TimeInfo* tinfo, char *line){
