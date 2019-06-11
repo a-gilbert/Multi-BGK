@@ -1,30 +1,28 @@
 #ifndef _SPECIES_H
 #define _SPECIES_H
 
+enum IonizationType{fixed, averageAtom};
+enum ElectronBehavior{dynamic, sticky}; //sticky as in born-oppenheimer
 
-#include <stdlib.h>
+struct SpeciesInfo {
+    enum IonizationType ionFix;
+    enum ElectronBehavior ecouple;
+    int nspec;
+    double *m;//masses
+    double *Z;//proton numbers
 
-/*!  \file  species.h 
- *   \brief This file provides the definition of the (macroscopic) species type
- */
+};
 
-typedef struct {
-  size_t  id;              /*!< identifier (macroscopic)*/ 
-  size_t  num_levels;       /*!< number of internal energy levels*/
-  size_t *lev_id;          /*!< vector storing the global id of the internal energy levels*/
-  double  Rgas;            /*!< gas constants [J/kg]*/
-  double  mass;            /*!< mass [kg]*/
-  double  mm;              /*!< molecular mass [kg/mol]*/
-  double  d_ref;           /*!< reference diameter [m]*/
-  double  T_ref;           /*!< reference temperature [K]*/
-  double  mu_ref;          /*!< reference dynamic viscosity [N*s/m^2]*/ 
-  double  omega;           /*!< viscosity law temperature exponent*/
-  double  E0;              /*!< formation energy [J]*/
-  double *Ei;              /*!< vector storing internal energy levels [J]*/
-  double *gi;              /*!< vector storing internal energy level degeneracies*/
-  char    name[80];        /*!< name*/
-} species;
+void init_speciesInfo(struct SpeciesInfo *sinfo);
 
-void load_and_allocate_spec(species **mixture, int num_species, char **species_list);
+void set_ionType(struct SpeciesInfo *sinfo, char *line);
 
-#endif
+void set_ecoupling(struct SpeciesInfo *sinfo, char *line);
+
+void set_nspec(struct SpeciesInfo *sinfo, char *line);
+
+void set_mass(struct SpeciesInfo *sinfo, int species, char *line);
+
+void set_z(struct SpeciesInfo *sinfo, int species, char *line);
+
+#endif //_SPECIES_H
