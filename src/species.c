@@ -35,14 +35,22 @@ void set_nspec(struct SpeciesInfo *sinfo, char *line){
     if(sinfo->ecouple == dynamic){
         sinfo->nspec += 1;
     }
-    sinfo->m = malloc(sinfo->nspec*sizeof(double));
-    sinfo->Z = malloc(sinfo->nspec*sizeof(double));
+    sinfo->m = realloc(sinfo->m, sinfo->nspec*sizeof(double));
+    sinfo->Z = realloc(sinfo->Z, sinfo->nspec*sizeof(double));
 }
 
 void set_mass(struct SpeciesInfo *sinfo, int species, char *line){
-    sscanf(line, "%g", &sinfo->m[species]);
+    if(sinfo->ecouple == dynamic) {
+        sscanf(line, "%g", &sinfo->m[species+1]);
+    } else if(sinfo->ecouple == sticky){
+        sscanf(line, "%g", &sinfo->m[species]);
+    }
 }
 
 void set_z(struct SpeciesInfo *sinfo, int species, char *line){
-    sscanf(line, "%g", &sinfo->Z[species]);
+    if(sinfo->ecouple == dynamic) {
+        sscanf(line, "%g", &sinfo->Z[species+1]);
+    } else if(sinfo->ecouple == sticky){
+        sscanf(line, "%g", &sinfo->Z[species]);
+    }
 }

@@ -15,6 +15,8 @@
 #include "Time.h"
 #include "Species.h"
 #include "Domain.h"
+#include "Parallel.h"
+#include "Problem.h"
 
 // Utilities and setup stuff
 #include "gauss_legendre.h"
@@ -40,17 +42,6 @@ int main(int argc, char **argv) {
 
   MPI_Init(&argc, &argv);
 
-  int rank, numRanks;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &numRanks);
-  MPI_Status status;
-  int rankCounter;
-  int rankOffset;
-  double *momentBuffer;
-  int *Nx_ranks;
-
-  // get input information, set up the problem
-
   ////////////////
   // Declarations//
   ////////////////
@@ -60,8 +51,25 @@ int main(int argc, char **argv) {
   struct SpeciesInfo SimSpecInfo;
   //sdims, slims, Nx, vdims, discret, vmag_lims, Nv, vsigma, vref
   struct DomainInfo SimDomainInfo;
+  //rank, tot_ranks, neighbor_ranks, loc_npoints, glob_nlims
+  struct ParallelInfo SimRankInfo;
+  //Te_init, Te_final, clog, nu_style, rhs_style, pot_style
+  struct ProblemInfo SimProblemInfo;
+  //phi, source
+  struct FieldInfo SimFieldInfo;
 
-  int dims;  // flag for 0D or 1D
+
+
+
+  MPI_Comm_rank(MPI_COMM_WORLD, &SimRankInfo->rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &SimRankInfo->tot_ranks);
+  MPI_Status status;
+  int rankCounter;
+  int rankOffset;
+  double *momentBuffer;
+  int *Nx_ranks;
+
+  // get input information, set up the problem
 
   int i, j, k, l, s;
 
