@@ -1,8 +1,19 @@
 #include <stdio.h>
 #include <stdlib.h>
+//variable containers.
+#include "Domain.h"
+#include "ICondition.h"
+#include "Parallel.h"
+#include "Problem.h"
+#include "Solver.h"
+#include "Species.h"
+#include "Time.h"
 
 #ifndef _INPUT_H
 #define _INPUT_H
+
+void read_input(char *inFileName, struct ParallelInfo *parinfo, struct SpeciesInfo *spinfo, struct TimeInfo *tinfo, 
+                struct DomainInfo *dinfo, struct ProblemInfo *pinfo, struct SolverInfo *solinfo, struct ICInfo *icinfo);
 
 void read_input(int *nspec, int *dims, int *Nx, double *Lx, int *bc, int *Nv,
                 double *v_sigma, int *discret, int *poissFlavor, double **m,

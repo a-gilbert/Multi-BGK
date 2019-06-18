@@ -1,7 +1,7 @@
 #include<stdio.h>
 #include "Time.h"
 
-void init_timeInfo(struct TimeInfo* tinfo){
+void init_time_info(struct TimeInfo* tinfo){
     tinfo->dt = 1e-16;
     tinfo->t = 0;
     tinfo->tfinal = 1e-12;
@@ -12,12 +12,12 @@ void set_timestep(struct TimeInfo* tinfo, char *line){
     sscanf(line, "dt = %g", &tinfo->dt);
 }
 
-void set_time(struct TimeInfo* tinfo, double atime){
+void set_time(struct TimeInfo *tinfo, double atime){
     tinfo->t = atime;
 }
 
-void set_tfinal(struct TimeInfo* tinfo, char *line){
-    sscanf(line, "Final time = %g", &tinfo->tfinal);
+void set_tfinal(struct TimeInfo *tinfo, char *line){
+    sscanf(line, "Final_Time = %g", &tinfo->tfinal);
 }
 
 void update_time(struct TimeInfo* tinfo){

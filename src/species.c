@@ -4,7 +4,7 @@
 #include "units/unit_data.c"
 #include "Species.h"
 
-void init_speciesInfo(struct SpeciesInfo *sinfo){
+void init_species_info(struct SpeciesInfo *sinfo){
     sinfo->ionFix = fixed;
     sinfo->ecouple = dynamic;
     sinfo->nspec = 1; //electrons are dynamic

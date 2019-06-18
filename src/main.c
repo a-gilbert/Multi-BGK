@@ -12,11 +12,13 @@
 #include <string.h>
 
 //Variable Containers
-#include "Time.h"
-#include "Species.h"
 #include "Domain.h"
+#include "ICondition.h"
 #include "Parallel.h"
 #include "Problem.h"
+#include "Solver.h"
+#include "Species.h"
+#include "Time.h"
 
 // Utilities and setup stuff
 #include "gauss_legendre.h"
@@ -45,18 +47,20 @@ int main(int argc, char **argv) {
   ////////////////
   // Declarations//
   ////////////////
+  //info needed to initialize distribution functions. Free up the memory after initialization.
+  struct ICInfo *SimICInfo = malloc(sizeof(struct ICInfo));
   //dt, t, tfinal, nT
   struct TimeInfo SimTimeInfo;
   //ionFix, ecouple, nspec, m, Z
   struct SpeciesInfo SimSpecInfo;
   //sdims, slims, Nx, vdims, discret, vmag_lims, Nv, vsigma, vref
   struct DomainInfo SimDomainInfo;
-  //rank, tot_ranks, neighbor_ranks, loc_npoints, glob_nlims
-  struct ParallelInfo SimRankInfo;
   //Te_init, Te_final, clog, nu_style, rhs_style, pot_style
   struct ProblemInfo SimProblemInfo;
-  //phi, source
-  struct FieldInfo SimFieldInfo;
+  //RHStype, order, rhs_tol, rhs_min, hydro_flag
+  struct SolverInfo SimSolverInfo;
+  //ParallelScheme, rank, tot_ranks, neighbor_ranks, loc_npoints, glob_nlims
+  struct ParallelInfo SimRankInfo;
 
 
 
@@ -68,6 +72,29 @@ int main(int argc, char **argv) {
   int rankOffset;
   double *momentBuffer;
   int *Nx_ranks;
+
+/**********************************
+         I/O Setup
+  **********************************/
+
+  char *input_filename = malloc(1000*sizeof(char));
+  strcpy(input_filename, argv[1]);
+
+  read_input(input_filename, &SimRankInfo, &SimSpecInfo, &SimTimeInfo, &SimDomainInfo,
+             &SimProblemInfo, &SimSolverInfo, &SimICInfo);
+
+
+  read_input(&nspec, &dims, &Nx, &Lx, &bc, &Nv, &v_sigma, &discret, &poissFlavor, &m,
+             &Z_max, &order, &im_ex, &dt, &tfinal, &numint, &intervalLimits,
+             &ndens_int, &velo_int, &T_int, &ecouple, &ionFix, &Te_start,
+             &Te_ref, &CL_type, &ion_type, &MT_or_TR, &n_zerod, &v_val,
+             &T_zerod, &dataFreq, &outputDist, &RHS_tol, &BGK_type, &beta,
+             &hydro_kinscheme_flag, &input_file_data_flag,
+             input_file_data_filename, input_filename);
+
+  char output_path[100] = {"./Data/"};
+  strcat(output_path, argv[1]);
+
 
   // get input information, set up the problem
 

@@ -2,7 +2,7 @@
 #include<string.h>
 #include "Problem.h"
 
-void init_problemInfo(struct ProblemInfo *pinfo){
+void init_problem_info(struct ProblemInfo *pinfo){
     pinfo->Te_init = 100.0;
     pinfo->Te_final = 100.0;
     pinfo->clog = GMS;
@@ -20,37 +20,40 @@ void set_etemp_final(struct ProblemInfo *pinfo, char *line){
 }
 
 void set_clog(struct ProblemInfo *pinfo, char *line){
-    if(strcmp(line, "Coulomb_type = GMS") == 0){
+    if(strcmp(line, "Coulomb_Log = GMS") == 0){
         pinfo->clog = GMS;
-    } else if(strcmp(line, "Coulomb_type = NRL") == 0){
+    } else if(strcmp(line, "Coulomb_Log = NRL") == 0){
         pinfo->clog = NRL;
     }
 }
 
 void set_nu(struct ProblemInfo *pinfo, char *line){
-    if(strcmp(line, "Ion_coll_type = StantonMurillo") == 0){
+    if(strcmp(line, "Ion_Coll_Type = StantonMurillo") == 0){
         pinfo->nu_style = StantonMurillo;
-    } else if(strcmp(line, "Ion_coll_type = NRL") == 0){
+    } else if(strcmp(line, "Ion_Coll_Type = NRL") == 0){
         pinfo->nu_style = NRL;
     }
 }
 
 void set_closure(struct ProblemInfo *pinfo, char *line){
-    if(strcmp(line, "ClosureType = Vlasov") == 0){
+    if(strcmp(line, "Closure_Type = Vlasov") == 0){
+        //vlasov means no rhs, makes no comment on the mean field. 
         pinfo->rhs_style = VLASOV;
-    }else if(strcmp(line, "ClosureType = BGK_MT") == 0){
+    }else if(strcmp(line, "Closure_Type = BGK_MT") == 0){
         pinfo->rhs_style = BGK_MT;
-    }else if(strcmp(line, "ClosureType = BGK_TR") == 0){
+    }else if(strcmp(line, "Closure_Type = BGK_TR") == 0){
         pinfo->rhs_style = BGK_TR;
-    }else if(strcmp(line, "ClosureType = BGK_GREENE") == 0){
+    }else if(strcmp(line, "Closure_Type = BGK_GREENE") == 0){
         pinfo->rhs_style = BGK_GREENE;
-    }else if(strcmp(line, "ClosureType = BGK_NRL") == 0){
+    }else if(strcmp(line, "Closure_Type = BGK_NRL") == 0){
         pinfo->rhs_style = BGK_NRL;
     }
 }
 
 void set_poisson(struct ProblemInfo *pinfo, char *line){
-    if(strcmp(line, "Poisson = Classic") == 0){
+    if(strcmp(line, "Poisson = None") == 0){
+        pinfo->pot_style=NONE;
+    }else if(strcmp(line, "Poisson = Classic") == 0){
         pinfo->pot_style=CLASSIC;
     }else if(strcmp(line, "Poisson = Boltzmann") == 0){
         pinfo->pot_style=BOLZTMANN;

@@ -8,7 +8,7 @@ struct TimeInfo {
     int nT;
 };
 
-void init_timeInfo(struct TimeInfo* tinfo);
+void init_time_info(struct TimeInfo* tinfo);
 
 void set_timestep(struct TimeInfo* tinfo, char *line);
 

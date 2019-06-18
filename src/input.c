@@ -1,13 +1,144 @@
-#include "input.h"
-#include "units/unit_data.c"
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "input.h"
+#include "units/unit_data.c"
+
 /*!
  *  This function reads the input file
  */
+//order here reflects the order of significance of the sim invariants. I.e. you should structure your input
+//file in the same manner. 
+ void read_input(char *inFileName, struct ParallelInfo *parinfo, struct SpeciesInfo *spinfo, struct TimeInfo *tinfo,
+                 struct DomainInfo *dinfo, struct ProblemInfo *pinfo, struct SolverInfo *solinfo, struct ICInfo *icinfo){
+  //set default values
+  init_parallel_info(parinfo);
+  init_species_info(spinfo);
+  init_time_info(tinfo);
+  init_domain_info(dinfo);
+  init_problem_info(pinfo);
+  init_solver_info(sinfo);
+
+  char line[1000] = {"dummy"};
+  if(parinfo->rank == 0){
+    printf("Opening input file %s.\n", inFileName)
+  }
+  FILE *infile = fopen(inFileName, "r");
+
+  if(infile == NULL){
+    if(parinfo->rank == 0){
+      printf("Error - input file not found.\n");
+      exit(1);
+    }
+  }
+  //read input file
+  while(!feof(infile)){
+    read_line(infile, line);
+
+    //parallel info.
+    if(strncmp(line, "parallelism", strlen("parallelism")) == 0){
+      set_parallelism(parinfo, line);
+    }
+    //species info
+    if(strncmp(line, "ion_fix", strlen("ion_fix")) == 0){
+      set_ionType(spinfo, line);
+    }
+    if(strncmp(line, "ecouple", strlen('ecouple')) == 0){
+      set_ecoupling(spinfo, line);
+    }
+    if(strncmp(line, "nspec", strlen('nspec')) == 0){
+      set_nspec(spinfo, line);
+    }
+    //set masses.
+    if(strcmp(line, "mass") == 0){
+      for(int i = 0; i < spinfo->nspec; i++){
+        read_line(infile, line);
+        set_mass(spinfo, i, line);
+      }
+    }
+    //set proton number
+    if(strcmp(line, "Z") == 0){
+      for(int i = 0; i < spinfo->nspec; i++){
+        read_line(infile, line);
+        set_z(spinfo, i, line);
+      }
+    }
+    //time info.
+    if(strncmp(line, "dt", 2) == 0){
+      set_timestep(tinfo, line);
+    }
+    if(strncmp(line, "Final_Time", strlen("Final_Time")) == 0){
+      set_tfinal(tinfo, line);
+    }
+    //domain info
+    if(strncmp(line, "sdims", 5) == 0){
+      set_sdims(dinfo, line);
+    }
+    if(strncmp(line, "boundary", 8) == 0){
+      set_bc(dinfo, line);
+    }
+    if(strncmp(line, "slims", 5) == 0){
+      set_slims(dinfo, line);
+    }
+    if(strncmp(line, "Nx", 2) == 0){
+      set_sgrid(dinfo, line);
+    }
+    if(strncmp(line, "vdims", 5) == 0){
+      //unfortunate dependence on nspec here is because the vlims array for 
+      //each species has to be allocated.
+      set_vdims(dinfo, spinfo->nspec, line);
+    }
+    if(strncmp(line, "Nv", 2) == 0){
+      set_vgrid(dinfo, line);
+    }
+    if(strncmp(line, "vsigma", 6) == 0){
+      set_vsigma(dinfo, line);
+    }
+    //Problem Info. 
+    if(strncmp(line, "Te_init", 7) == 0){
+      set_etemp_init(pinfo, line);
+    }
+    if(strncmp(line, "Te_final", 8) == 0){
+      set_etemp_final(pinfo, line);
+    }
+    if(strncmp(line, "Coulomb_Log", 11) == 0){
+      set_clog(pinfo, line);
+    }
+    if(strncmp(line, "Ion_Coll_Type", 14) == 0){
+      set_nu(pinfo, line);
+    }
+    if(strncmp(line, "Closure_Type", 13) == 0){
+      set_closure(pinfo, line);
+    }
+    if(strncmp(line, "Poisson", 8) == 0){
+      set_poisson(pinfo, line);
+    }
+    //Solver Info
+    if(strncmp(line, "RHS_Type", 9) == 0){
+      set_rhs_type(solinfo, line);
+    }
+    if(strncmp(line, "Run_Style", 10) == 0){
+      set_runstyle(solinfo, line);
+    }
+    if(strncmp(line, "Order", 6) == 0){
+      set_order(solinfo, line);
+    }
+    if(strncmp(line, "RHS_Tol", 8) == 0){
+      set_collision_tol(solinfo, line);
+    }
+    if(strncmp(line, "RHS_Min", 8) == 0){
+      set_collision_min(solinfo, line);
+    }
+
+  }
+  fclose(infile);
+}
+
+void rank0_print_int(struct ParallelInfo *pinfo, char *s, int i){
+  if(pinfo->rank == 0)
+}
 
 void read_input(int *nspec, int *dims, int *Nx, double *Lx, int* bc, int *Nv,
                 double *v_sigma, int *discret, int *poissFlavor, double **m,
@@ -476,9 +607,9 @@ void check_input(const int *flag) {
 /*!
  * This function reads a string of characters from a file
  */
-void read_line(FILE *file, char line[10000]) {
+void read_line(FILE *file, char line[1000]) {
 
-  fgets(line, 10000, file);
+  fgets(line, 1000, file);
   if (line == NULL) {
     printf("\n%s\n", "ERROR: read_line");
     printf("\n%s\n", "Error while reading the input file!");

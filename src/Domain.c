@@ -3,9 +3,10 @@
 #include<string.h>
 #include "Domain.h"
 
-void init_domainInfo(struct DomainInfo *dinfo, int *nspec){
+void init_domain_info(struct DomainInfo *dinfo, int *nspec){
     dinfo->sdims = 1;
-    dinfo->bcs = periodic;
+    dinfo->bcs = malloc(sizeof(enum BoundaryCondition));
+    dinfo->bcs[0] = periodic;
     dinfo->slims = malloc(sizeof(double));
     dinfo->Nx = malloc(sizeof(int));
     dinfo->slims[0] = 1000e-6;
@@ -28,14 +29,37 @@ void set_sdims(struct DomainInfo *dinfo, char *line){
     sscanf(line, "sdims = %d", &dinfo->sdims);
     //techinically some savings could be made here if dinfo->sdims=0
     dinfo->slims = realloc(dinfo->slims, dinfo->sdims*sizeof(double));
+    dinfo->bcs = realloc(dinfo->bcs, dinfo->sdims*sizeof(enum BoundaryCondition));
     dinfo->Nx = realloc(dinfo->Nx, dinfo->sdims*sizeof(int));
 }
 
 void set_bc(struct DomainInfo *dinfo, char *line){
-    if(strcmp(line, "boundary = periodic") == 0){
-        dinfo->bcs = periodic;
-    } else if(strcmp(line, "boundary = fixed") == 0){
-        dinfo->bcs = fixed;
+    if(dinfo->sdims > 0){
+        char **string_bc = malloc(dinfo->sdims*sizeof(char*));
+        for(int i = 0; i<dinfo->sdims; i++){
+            string_bc[i] = malloc(8*sizeof(char)); //periodic has 8 chars, fixed has 5.
+        }
+        if(dinfo->sdims == 1){
+            sscanf(line, "boundary = %s", string_bc[0]);
+        }else if(dinfo->sdims == 2){
+            int j = sscanf(line, "boundary = %s %s", string_bc[0], string_bc[1]);
+            if(j < dinfo->sdims){
+              string_bc[1] = string_bc[0];
+            }
+        }else if(dinfo->sdims == 3){
+            int j = sscanf(line, "boundary = %s %s %s", string_bc[0], string_bc[1], string_bc[2]);
+            if(j < dinfo->sdims){
+                string_bc[1] = string_bc[0];
+                string_bc[2] = string_bc[0];
+            }
+        }
+        for(int i = 0; i<dinfo->sdims; i++){
+            if(strcmp(string_bc[i], "periodic") == 0){
+                dinfo->bcs[i] = periodic;
+            }else if(strcmp(string_bc[i], "fixed") == 0){
+                dinfo->bcs[i] = fixed;
+            }
+        }
     }
 }
 

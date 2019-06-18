@@ -4,8 +4,7 @@
 enum CoulombLog{GMS, NRL};
 enum CollisionRate{StantonMurillo, NRL};
 enum Closure{VLASOV, BGK_MT, BGK_TR, BGK_GREENE, BGK_NRL};
-enum PoissonType{CLASSIC, BOLZTMANN, DEBYE_HUCKEL, THOMAS_FERMI, LINEAR_THOMAS_FERMI};
-enum IC{INTERVAL, RESTART};
+enum PoissonType{NONE, CLASSIC, BOLZTMANN, DEBYE_HUCKEL, THOMAS_FERMI, LINEAR_THOMAS_FERMI};
 
 struct ProblemInfo {
     double Te_init;
@@ -16,7 +15,7 @@ struct ProblemInfo {
     enum PoissonType pot_style;
 };
 
-void init_problemInfo(struct ProblemInfo *pinfo);
+void init_problem_info(struct ProblemInfo *pinfo);
 
 void set_etemp_init(struct ProblemInfo *pinfo, char *line);
 

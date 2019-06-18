@@ -5,7 +5,7 @@ enum BoundaryCondition{periodic, fixed};
 
 struct DomainInfo {
     int sdims;
-    enum BoundaryCondition bcs;
+    enum BoundaryCondition* bcs;
     double *slims; //1 index->dimension (x, y, z)
     int *Nx; //1 index->dimension
     int vdims;
@@ -15,7 +15,7 @@ struct DomainInfo {
     double *vref;
 };
 
-void init_domainInfo(struct DomainInfo *dinfo, int *nspec);
+void init_domain_info(struct DomainInfo *dinfo, int *nspec);
 
 void set_sdims(struct DomainInfo *dinfo, char *line);
 

@@ -13,7 +13,7 @@ struct SpeciesInfo {
 
 };
 
-void init_speciesInfo(struct SpeciesInfo *sinfo);
+void init_species_info(struct SpeciesInfo *sinfo);
 
 void set_ionType(struct SpeciesInfo *sinfo, char *line);
 
